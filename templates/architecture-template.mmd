@@ -1,0 +1,35 @@
+flowchart TD
+  subgraph Interface
+    UI[User Interface]
+    CLI[CLI / API Entry]
+  end
+
+  subgraph Analysis
+    SCAN[Repository Scanner]
+    MAP[Repo Mapper]
+    SUM[Module Summarizer]
+  end
+
+  subgraph Retrieval
+    CHUNK[Chunk Builder]
+    IDX[Embedding / Indexer]
+    RET[Retriever]
+  end
+
+  subgraph Knowledge
+    DOCS[(Docs Store)]
+    VDB[(Vector DB)]
+    META[(Metadata Store)]
+  end
+
+  UI --> CLI
+  CLI --> SCAN
+  SCAN --> MAP
+  MAP --> SUM
+  SCAN --> CHUNK
+  CHUNK --> IDX
+  IDX --> VDB
+  SUM --> META
+  RET --> VDB
+  RET --> META
+  UI --> RET

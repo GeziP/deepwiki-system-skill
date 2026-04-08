@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chunk",
+  "type": "object",
+  "properties": {
+    "filepath": {"type": "string"},
+    "start_line": {"type": "integer"},
+    "end_line": {"type": "integer"},
+    "language": {"type": "string"},
+    "symbols": {"type": "array", "items": {"type": "string"}},
+    "text": {"type": "string"}
+  },
+  "required": ["filepath", "text"]
+}

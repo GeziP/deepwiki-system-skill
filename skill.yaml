@@ -1,0 +1,39 @@
+name: deepwiki-system
+version: 0.2.0
+template: deepwiki
+owner: team-ai
+language: zh-CN
+description: 系统级架构设计文档生成 Skill
+tags:
+  - architecture
+  - documentation
+  - mermaid
+  - rag
+  - code-analysis
+  - system-design
+  - deepwiki
+  - zh-CN
+defaults:
+  answer_style: concise-technical
+  citation_mode: filepath-inline
+capabilities:
+  - repo-analysis
+  - architecture-diagram
+  - module-summary
+  - system-documentation
+artifacts:
+  repo_map: artifacts/repo-map.json
+  chunks: artifacts/chunks.jsonl
+  summaries: artifacts/module-summaries.json
+  diagrams: artifacts/architecture.mmd
+output:
+  document: doc/Scheduler_Architecture_Design.md
+routing:
+  when_system_doc: references/code-analysis.md
+  when_need_diagram: references/architecture-mermaid.md
+  when_need_summary: references/module-summary.md
+triggers:
+  - "系统设计文档"
+  - "架构设计文档"
+  - "整体设计文档"
+  - "deepwiki-system"

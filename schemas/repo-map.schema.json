@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RepoMap",
+  "type": "object",
+  "properties": {
+    "project": {"type": "string"},
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "paths": {"type": "array", "items": {"type": "string"}},
+          "depends_on": {"type": "array", "items": {"type": "string"}},
+          "used_by": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["name", "paths"]
+      }
+    }
+  },
+  "required": ["project", "modules"]
+}
