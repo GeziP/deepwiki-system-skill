@@ -3,7 +3,7 @@ version: 0.2.0
 template: deepwiki
 owner: team-ai
 language: zh-CN
-description: 系统级架构设计文档生成 Skill
+description: 系统级架构设计文档生成 Skill。扫描代码仓库，分析模块结构与依赖关系，生成 Mermaid 系统架构图、模块摘要集合和完整系统设计文档。当用户询问系统架构、整体设计、模块关系、数据流、线程模型或要求生成架构图时，务必使用此 Skill。
 tags:
   - architecture
   - documentation
