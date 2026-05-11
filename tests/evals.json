@@ -1,0 +1,66 @@
+{
+  "skill_name": "deepwiki-system",
+  "evals": [
+    {
+      "id": 1,
+      "name": "repo_overview",
+      "prompt": "这个仓库的主功能是什么？请分析整体架构。",
+      "expected_output": "结构化的项目概述，包含项目名、目的、技术栈、入口点、核心模块",
+      "files": [],
+      "assertions": [
+        {"type": "contains", "value": "project", "description": "输出包含项目概述"},
+        {"type": "contains", "value": "entry", "description": "输出包含入口点"},
+        {"type": "contains", "value": "module", "description": "输出包含模块信息"},
+        {"type": "contains", "value": "evidence", "description": "输出包含证据引用"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "architecture_diagram",
+      "prompt": "生成这个系统的架构 Mermaid 图",
+      "expected_output": "可渲染的 Mermaid flowchart，包含 subgraph 分层结构",
+      "files": [],
+      "assertions": [
+        {"type": "contains", "value": "flowchart TD", "description": "使用 flowchart TD 格式"},
+        {"type": "contains", "value": "subgraph", "description": "使用 subgraph 表达边界"},
+        {"type": "regex_match", "value": "\\w+\\s*-->\\s*\\w+", "description": "包含依赖箭头"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "module_summary",
+      "prompt": "总结 auth 模块的职责和接口",
+      "expected_output": "模块摘要，包含 Responsibility、Public API、Dependencies",
+      "files": [],
+      "assertions": [
+        {"type": "contains", "value": "Responsibility", "description": "包含职责描述"},
+        {"type": "contains", "value": "Public API", "description": "包含公开接口"},
+        {"type": "contains", "value": "Dependencies", "description": "包含依赖信息"}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "rag_qa",
+      "prompt": "JWT 校验逻辑在哪里实现的？",
+      "expected_output": "问答格式，包含 Answer、Evidence、文件路径引用",
+      "files": [],
+      "assertions": [
+        {"type": "contains", "value": "Answer", "description": "包含答案部分"},
+        {"type": "contains", "value": "Evidence", "description": "包含证据部分"},
+        {"type": "regex_match", "value": "[a-zA-Z0-9_/.-]+\\.\\w+", "description": "包含文件路径引用"}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "system_doc_generation",
+      "prompt": "帮我生成这个仓库的系统设计文档",
+      "expected_output": "完整的系统架构文档，包含架构图、模块摘要、数据流",
+      "files": [],
+      "assertions": [
+        {"type": "contains", "value": "架构", "description": "包含架构描述"},
+        {"type": "contains", "value": "模块", "description": "包含模块分析"},
+        {"type": "contains", "value": "数据流", "description": "包含数据流描述"}
+      ]
+    }
+  ]
+}
