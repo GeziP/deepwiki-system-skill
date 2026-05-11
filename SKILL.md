@@ -138,6 +138,47 @@ HTML 特性：
    - 运行 `node system-md-to-html.js doc/<Name>.md` 生成 HTML
    - 运行 `node system-md-to-html.js --index` 更新索引页
 
+6. **Mermaid 校验与修复**（必须步骤）
+   - 生成 HTML 后，**必须**执行以下校验脚本修复 Mermaid 语法问题：
+   ```bash
+   node -e "
+   const fs = require('fs');
+   const f = 'doc/<Name>_Design.html';
+   let c = fs.readFileSync(f, 'utf8');
+   const re = /<div class=\"mermaid\">([\s\S]*?)<\/div>/g;
+   let m, fixed = c;
+   while ((m = re.exec(c)) !== null) {
+     let b = m[1];
+     // 1. 还原 HTML 实体
+     b = b.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+     // 2. 修复虚线箭头 -.> →  -.-> (但不改 -.->)
+     b = b.replace(/-\.\>(?!-)/g, '-.->');
+     // 3. 替换标签中的花括号（与 Mermaid 菱形语法冲突）
+     b = b.replace(/\[\"([^\"]*\{[^}]*)\"\]/g, function(_, inner) {
+       return '[\"' + inner.replace(/\{/g, '【').replace(/\}/g, '】') + '\"]';
+     });
+     if (b !== m[1]) fixed = fixed.replace(m[1], b);
+   }
+   fs.writeFileSync(f, fixed, 'utf8');
+   console.log('Mermaid validation done');
+   "
+   ```
+   - 校验规则：
+     - Mermaid 块内不得包含 `&gt;` `&lt;` `&amp;` HTML 实体
+     - 虚线箭头必须写 `-.->` 而非 `-.>`
+     - 节点标签中的 `{}` 需替换为 `【】`（避免与菱形节点语法冲突）
+     - 序列图消息文本中的 `->` 需改为 `.`（如 `codec->getBuffer()` → `codec.getBuffer()`）
+
+## HTML 输出特性
+
+生成的 HTML 已内置 **Mermaid 图表交互式放大**功能：
+- 点击任意图表进入全屏查看模式（自动适配屏幕）
+- 滚轮缩放（20% ~ 500%）
+- 拖拽平移查看细节
+- 底部工具栏：缩小 / 百分比 / 放大 / 重置
+- 移动端支持双指缩放、单指拖拽
+- 关闭方式：点击空白处 / 按 Esc / 点击右上角 ×
+
 ## Operating Model
 
 - 输入优先使用 repo map、符号表、README、配置文件、入口文件

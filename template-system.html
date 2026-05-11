@@ -220,7 +220,19 @@
       border: 1px solid var(--border); border-radius: 8px;
       background: var(--bg-secondary); text-align: center;
       overflow-x: auto;
+      cursor: zoom-in; position: relative;
     }
+    .mermaid-wrap:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(28,135,144,0.12);
+    }
+    .mermaid-wrap::after {
+      content: '点击放大'; position: absolute;
+      bottom: 6px; right: 10px; font-size: 12px;
+      color: var(--text-faint); opacity: 0;
+      transition: opacity 0.2s; pointer-events: none;
+    }
+    .mermaid-wrap:hover::after { opacity: 1; }
     .mermaid-wrap .mermaid { display: inline-block; max-width: 100%; }
     .mermaid-wrap figcaption {
       margin-top: 12px; font-size: 13px;
@@ -229,6 +241,44 @@
     /* Mermaid loading placeholder */
     .mermaid-loading {
       padding: 40px; color: var(--text-faint); font-size: 14px;
+    }
+
+    /* ===== Mermaid Zoom Overlay ===== */
+    .mermaid-overlay {
+      display: none; position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85); z-index: 9999;
+      cursor: grab; overflow: hidden;
+    }
+    .mermaid-overlay.active { display: flex; align-items: center; justify-content: center; }
+    .mermaid-overlay.grabbing { cursor: grabbing; }
+    .mermaid-overlay-inner { transform-origin: center center; }
+    .mermaid-overlay .zoom-controls {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; background: rgba(30,30,50,0.9);
+      padding: 8px 16px; border-radius: 40px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 10000; user-select: none;
+    }
+    .mermaid-overlay .zoom-controls button {
+      background: rgba(255,255,255,0.1); border: none; color: #fff;
+      width: 36px; height: 36px; border-radius: 50%; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .mermaid-overlay .zoom-controls button:hover { background: rgba(255,255,255,0.25); }
+    .mermaid-overlay .zoom-controls .zoom-level {
+      color: #aaa; font-size: 13px; min-width: 50px; text-align: center; line-height: 36px;
+    }
+    .mermaid-overlay .zoom-close {
+      position: fixed; top: 16px; right: 20px;
+      background: rgba(255,255,255,0.1); border: none; color: #fff;
+      width: 40px; height: 40px; border-radius: 50%; font-size: 22px;
+      cursor: pointer; z-index: 10000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mermaid-overlay .zoom-close:hover { background: rgba(255,255,255,0.25); }
+    .mermaid-overlay .zoom-hint {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.5); font-size: 13px; z-index: 10000; pointer-events: none;
     }
 
     /* ===== Callouts ===== */
@@ -537,7 +587,125 @@
     window.toggleSidebar = function() {
       document.getElementById('sidebar').classList.toggle('open');
     };
-  })();
+
+    // --- Mermaid Zoom (click to fullscreen) ---
+    (function() {
+      var overlay = document.createElement('div');
+      overlay.className = 'mermaid-overlay';
+      overlay.innerHTML =
+        '<button class="zoom-close" title="关闭 (Esc)">&times;</button>' +
+        '<span class="zoom-hint">滚轮缩放 · 拖拽平移 · 点击空白处关闭</span>' +
+        '<div class="mermaid-overlay-inner"></div>' +
+        '<div class="zoom-controls">' +
+        '<button class="zoom-out" title="缩小">−</button>' +
+        '<span class="zoom-level">100%</span>' +
+        '<button class="zoom-in" title="放大">+</button>' +
+        '<button class="zoom-reset" title="重置">⟲</button>' +
+        '</div>';
+      document.body.appendChild(overlay);
+
+      var inner = overlay.querySelector('.mermaid-overlay-inner');
+      var zoomLevelEl = overlay.querySelector('.zoom-level');
+      var scale = 1, panX = 0, panY = 0, isDragging = false, dragX, dragY;
+      var MIN = 0.2, MAX = 5;
+
+      function update() {
+        inner.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + scale + ')';
+        zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+      }
+      function reset() { scale = 1; panX = 0; panY = 0; update(); }
+      function close() {
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+        inner.innerHTML = '';
+      }
+
+      // Open on click
+      document.addEventListener('click', function(e) {
+        var wrap = e.target.closest('.mermaid-wrap');
+        if (!wrap || overlay.classList.contains('active')) return;
+        var svg = wrap.querySelector('svg');
+        if (!svg) return;
+        inner.innerHTML = '';
+        var clone = svg.cloneNode(true);
+        clone.style.maxWidth = 'none';
+        inner.appendChild(clone);
+        reset();
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        setTimeout(function() {
+          var r = clone.getBoundingClientRect();
+          var vw = window.innerWidth * 0.9, vh = window.innerHeight * 0.8;
+          if (r.width > vw || r.height > vh) {
+            scale = Math.min(vw / r.width, vh / r.height);
+            update();
+          }
+        }, 50);
+      });
+
+      // Close handlers
+      overlay.querySelector('.zoom-close').addEventListener('click', close);
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay || e.target === inner) close();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) close();
+      });
+
+      // Zoom buttons
+      overlay.querySelector('.zoom-in').addEventListener('click', function(e) {
+        e.stopPropagation(); scale = Math.min(MAX, scale * 1.25); update();
+      });
+      overlay.querySelector('.zoom-out').addEventListener('click', function(e) {
+        e.stopPropagation(); scale = Math.max(MIN, scale / 1.25); update();
+      });
+      overlay.querySelector('.zoom-reset').addEventListener('click', function(e) {
+        e.stopPropagation(); reset();
+      });
+
+      // Mouse wheel
+      overlay.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        scale = Math.max(MIN, Math.min(MAX, scale * (e.deltaY > 0 ? 0.9 : 1.1)));
+        update();
+      }, { passive: false });
+
+      // Drag
+      inner.addEventListener('mousedown', function(e) {
+        isDragging = true; dragX = e.clientX - panX; dragY = e.clientY - panY;
+        overlay.classList.add('grabbing'); e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        panX = e.clientX - dragX; panY = e.clientY - dragY; update();
+      });
+      document.addEventListener('mouseup', function() {
+        isDragging = false; overlay.classList.remove('grabbing');
+      });
+
+      // Touch
+      var lastDist = 0;
+      inner.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) {
+          isDragging = true; dragX = e.touches[0].clientX - panX; dragY = e.touches[0].clientY - panY;
+        } else if (e.touches.length === 2) {
+          isDragging = false;
+          lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        }
+        e.preventDefault();
+      }, { passive: false });
+      inner.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 1 && isDragging) {
+          panX = e.touches[0].clientX - dragX; panY = e.touches[0].clientY - dragY; update();
+        } else if (e.touches.length === 2 && lastDist > 0) {
+          var d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+          scale = Math.max(MIN, Math.min(MAX, scale * (d / lastDist)));
+          lastDist = d; update();
+        }
+        e.preventDefault();
+      }, { passive: false });
+      inner.addEventListener('touchend', function() { isDragging = false; lastDist = 0; });
+    })();
   </script>
 </body>
 </html>

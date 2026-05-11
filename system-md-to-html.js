@@ -64,6 +64,25 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * Fix common Mermaid syntax issues in code blocks before embedding into HTML.
+ * - Decode HTML entities that would break Mermaid parser
+ * - Fix dotted arrows: -.> → -.->  (but not -.-> which is already correct)
+ * - Replace curly braces {} in node labels with 【】 to avoid conflict with diamond syntax
+ * - Replace -> in sequence diagram message text with . to avoid arrow confusion
+ */
+function fixMermaidContent(content) {
+  // 1. Decode HTML entities
+  content = content.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+  // 2. Fix dotted arrows: -.> not followed by - → -.->
+  content = content.replace(/-\.\>(?!-)/g, '-.->');
+  // 3. Replace {} in quoted node labels (but not diamond nodes which use {"..."})
+  content = content.replace(/\["([^"]*\{[^}]*)"\]/g, function(_, inner) {
+    return '["' + inner.replace(/\{/g, '【').replace(/\}/g, '】') + '"]';
+  });
+  return content;
+}
+
 function parseMdMeta(lines) {
   const meta = {};
   for (const line of lines) {
@@ -209,7 +228,7 @@ function mdBodyToHtml(body) {
       } else {
         const content = codeLines.join('\n');
         if (codeLang === 'mermaid') {
-          out.push(`<div class="mermaid-wrap"><div class="mermaid">\n${content}\n</div></div>`);
+          out.push(`<div class="mermaid-wrap"><div class="mermaid">\n${fixMermaidContent(content)}\n</div></div>`);
         } else {
           const lang = codeLang || '';
           out.push(`<figure class="code-block" data-lang="${lang}"><pre><code>${escapeHtml(content)}</code></pre></figure>`);
