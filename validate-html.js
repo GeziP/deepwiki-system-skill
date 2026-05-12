@@ -506,6 +506,38 @@ function checkHtmlSkeleton(html, report) {
   }
 }
 
+/**
+ * 9. JavaScript 语法校验
+ */
+function checkJavaScript(html, report) {
+  const cat = 'JavaScript 语法';
+  const scriptRe = /<script>([\s\S]*?)<\/script>/g;
+  let m;
+  let blockCount = 0;
+  let syntaxErrors = [];
+
+  while ((m = scriptRe.exec(html)) !== null) {
+    blockCount++;
+    const js = m[1].trim();
+    if (js.length === 0) continue;
+    try {
+      new Function(js);
+    } catch (e) {
+      syntaxErrors.push({ block: blockCount, error: e.message, snippet: js.slice(-80).replace(/\n/g, '\\n') });
+    }
+  }
+
+  if (blockCount === 0) {
+    report.pass(cat, 'No inline script blocks found');
+  } else if (syntaxErrors.length === 0) {
+    report.pass(cat, `${blockCount} script block(s) syntax valid`);
+  } else {
+    for (const err of syntaxErrors) {
+      report.fail(cat, `Script #${err.block}: ${err.error} (…${err.snippet})`);
+    }
+  }
+}
+
 // ============================================================
 // Main
 // ============================================================
@@ -515,7 +547,7 @@ function validateFile(filePath, fix) {
   const report = new Report(path.basename(filePath));
   const originalHtml = html;
 
-  // Run all 8 checks
+  // Run all 9 checks
   html = checkMermaid(html, report, fix);
   html = checkHeadingIds(html, report, fix);
   checkCodeBlocks(html, report);
@@ -524,6 +556,7 @@ function validateFile(filePath, fix) {
   checkCollapsibleSections(html, report);
   html = checkTOC(html, report, fix);
   checkHtmlSkeleton(html, report);
+  checkJavaScript(html, report);
 
   const result = report.print();
 
