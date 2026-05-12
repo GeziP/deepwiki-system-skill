@@ -381,6 +381,20 @@ ${bodyHtml}
       </details>`;
   }).join('\n');
 
+  // Build static TOC from section headings + H3 sub-headings
+  const tocItems = [];
+  for (const s of sections) {
+    const id = sectionId(s.heading);
+    tocItems.push(`        <li><a href="#${id}-h2">${s.heading}</a></li>`);
+    const h3Matches = s.body.match(/^### (.+)$/gm) || [];
+    for (const h3 of h3Matches) {
+      const h3Text = h3.replace(/^### /, '').trim();
+      const h3Id = id + '-' + headingToId(h3Text);
+      tocItems.push(`        <li><a href="#${h3Id}" class="toc-h3">${h3Text}</a></li>`);
+    }
+  }
+  const tocHtml = '\n' + tocItems.join('\n') + '\n      ';
+
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -407,7 +421,7 @@ ${bodyHtml}
 
   <div class="layout">
     <aside class="sidebar" id="sidebar">
-      <nav><ul class="toc-list" id="toc"></ul></nav>
+      <nav><ul class="toc-list" id="toc">${tocHtml}</ul></nav>
     </aside>
 
     <article class="main" id="content">

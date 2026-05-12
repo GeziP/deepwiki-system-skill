@@ -436,8 +436,8 @@ function checkTOC(html, report, fix) {
   const cat = 'TOC 完整性';
   let fixedHtml = html;
 
-  // Find the TOC list (accept both id="toc" and id="tocList")
-  const tocMatch = html.match(/<ul class="toc-list"[^>]*>([\s\S]*?)<\/ul>/);
+  // Use a non-greedy regex that doesn't cross </ul> boundaries
+  const tocMatch = html.match(/<ul class="toc-list"[^>]*>((?:[^<]|<(?!\/ul>))*?)<\/ul>/);
   if (!tocMatch) {
     const hasSidebar = /class="sidebar"/.test(html) || /id="toc"/.test(html) || /toc-list/.test(html);
     if (!hasSidebar) {
@@ -450,37 +450,7 @@ function checkTOC(html, report, fix) {
 
   const tocContent = tocMatch[1].trim();
   if (tocContent.length === 0 || !/<li/.test(tocContent)) {
-    // TOC is empty — try to generate from headings
-    if (fix) {
-      const headings = [];
-      // Try <h2 id="xxx-h2"> (new format with details wrapper)
-      const h2Re = /<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
-      let hm;
-      while ((hm = h2Re.exec(html)) !== null) {
-        const id = hm[1];
-        const text = hm[2].replace(/<[^>]+>/g, '').trim();
-        headings.push({ id, text });
-      }
-
-      // Also check details[id] > summary > h2 pattern
-      if (headings.length === 0) {
-        const detailsRe = /<details[^>]*id="([^"]+)"[^>]*>\s*<summary><h2[^>]*>([\s\S]*?)<\/h2><\/summary>/g;
-        while ((hm = detailsRe.exec(html)) !== null) {
-          headings.push({ id: hm[1], text: hm[2].replace(/<[^>]+>/g, '').trim() });
-        }
-      }
-
-      if (headings.length > 0) {
-        const tocItems = headings.map(h => `        <li><a href="#${h.id}">${h.text}</a></li>`).join('\n');
-        const newToc = `\n${tocItems}\n      `;
-        fixedHtml = fixedHtml.replace(tocMatch[1], newToc);
-        report.fixed(cat, `Generated TOC with ${headings.length} entries`);
-      } else {
-        report.fail(cat, 'TOC is empty and no headings with IDs found to generate it');
-      }
-    } else {
-      report.fail(cat, 'TOC is empty (no <li> entries)');
-    }
+    report.fail(cat, 'TOC is empty (no <li> entries) — converter should generate static TOC');
   } else {
     // TOC has content — verify links point to existing IDs
     const tocLinks = tocContent.match(/href="#([^"]+)"/g) || [];
