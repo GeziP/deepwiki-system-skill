@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeepWiki System Skill</title>
+  <style>
+    :root {
+      --bg: #ffffff; --bg2: #f7f9fb; --text: #1f2a30; --muted: #66737c;
+      --border: #dfe6e8; --accent: #8b5cf6; --accent-soft: #f5f3ff;
+      --code-bg: #f5f7f9; --shadow: 0 4px 12px rgba(0,0,0,.06);
+    }
+    [data-theme="dark"] {
+      --bg: #0d1117; --bg2: #161b22; --text: #e6edf3; --muted: #8b949e;
+      --border: #30363d; --accent: #a78bfa; --accent-soft: #1a0d2e;
+      --code-bg: #1c2128; --shadow: 0 4px 12px rgba(0,0,0,.3);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Microsoft YaHei","Segoe UI",system-ui,sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+    .container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+    h2 { font-size: 18px; margin: 32px 0 12px; color: var(--accent); }
+    p { margin: 8px 0; font-size: 14px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 12px; margin: 16px 0; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .card-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .card p { color: var(--muted); font-size: 13px; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .btn { display: inline-block; padding: 8px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; margin: 4px 8px 4px 0; border: 1px solid var(--accent); color: var(--accent); transition: all .15s; }
+    .btn:hover { background: var(--accent); color: #fff; text-decoration: none; }
+    code { font-family: Consolas,"Courier New",monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+    pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 12px 0; font-size: 13px; line-height: 1.5; }
+    pre code { background: none; padding: 0; }
+    .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; text-align: center; }
+    .theme-btn { position: fixed; top: 16px; right: 16px; background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; padding: 4px 10px; font-size: 13px; }
+    .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+  <button class="theme-btn" onclick="toggleTheme()">Theme</button>
+  <div class="container">
+    <h1>DeepWiki System Skill</h1>
+    <p class="subtitle">Claude Code skill for generating system-level architecture design documents with Mermaid diagrams.</p>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-title">System Architecture Docs</div>
+        <p>Generate 8-10 chapter architecture documents from source code analysis.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Mermaid Diagrams</div>
+        <p>Runtime-rendered Mermaid.js diagrams with zoom interaction and dark/light theme support.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">HTML + Validation</div>
+        <p>Standalone HTML output with 9-category validation pipeline and auto-fix.</p>
+      </div>
+    </div>
+
+    <h2>Template Previews</h2>
+    <p>Click to preview each HTML template:</p>
+    <a class="btn" href="template-system.html">System Design</a>
+    <a class="btn" href="template-index.html">Index Page</a>
+
+    <h2>Quick Start</h2>
+<pre><code># Convert a system-level Markdown to HTML
+node system-md-to-html.js doc/System_Arch.md
+
+# Convert all system docs
+node system-md-to-html.js --all
+
+# Generate index page
+node system-md-to-html.js --index "Project" "Description"
+
+# Validate
+node validate-html.js --all</code></pre>
+
+    <h2>Features</h2>
+    <div class="cards">
+      <div class="card"><div class="card-title">Mermaid.js CDN</div><p>Runtime rendering with zoom, pan, dark/light theme auto-switch.</p></div>
+      <div class="card"><div class="card-title">Static TOC</div><p>Converter-generated sidebar navigation with ScrollSpy.</p></div>
+      <div class="card"><div class="card-title">highlight.js</div><p>Syntax highlighting for C++, JSON, and more.</p></div>
+      <div class="card"><div class="card-title">Collapsible Sections</div><p>H3 sections auto-wrapped in details/summary for long docs.</p></div>
+    </div>
+
+    <h2>Validation</h2>
+    <p>9 checks ensuring output quality:</p>
+    <div class="cards">
+      <div class="card"><div class="card-title">Mermaid</div><p>Entity escaping, arrow syntax, block completeness</p></div>
+      <div class="card"><div class="card-title">Heading IDs</div><p>All h2/h3/h4 have unique IDs</p></div>
+      <div class="card"><div class="card-title">Code Blocks</div><p>Language tags, figure wrappers</p></div>
+      <div class="card"><div class="card-title">JS Syntax</div><p>Inline scripts pass <code>new Function()</code> check</p></div>
+      <div class="card"><div class="card-title">TOC</div><p>All links point to existing IDs</p></div>
+      <div class="card"><div class="card-title">HTML Skeleton</div><p>doctype, charset, viewport, lang, title</p></div>
+    </div>
+
+    <h2>Links</h2>
+    <p>
+      <a class="btn" href="https://github.com/GeziP/deepwiki-system-skill">GitHub Repo</a>
+      <a class="btn" href="https://github.com/GeziP/deepwiki-system-skill/blob/main/SKILL.md">SKILL.md</a>
+      <a class="btn" href="https://github.com/GeziP/deepwiki-system-skill/blob/main/README.md">README</a>
+    </p>
+
+    <div class="footer">
+      DeepWiki System Skill &middot; <a href="https://github.com/GeziP">GeziP</a>
+    </div>
+  </div>
+  <script>
+  (function() {
+    function getTheme() {
+      var s = localStorage.getItem('dwsys-theme');
+      if (s) return s;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    function apply(t) { document.documentElement.setAttribute('data-theme', t); localStorage.setItem('dwsys-theme', t); }
+    apply(getTheme());
+    window.toggleTheme = function() { apply(getTheme() === 'dark' ? 'light' : 'dark'); };
+  })();
+  </script>
+</body>
+</html>
