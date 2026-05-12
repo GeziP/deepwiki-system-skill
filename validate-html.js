@@ -453,6 +453,7 @@ function checkTOC(html, report, fix) {
     // TOC is empty — try to generate from headings
     if (fix) {
       const headings = [];
+      // Try <h2 id="xxx-h2"> (new format with details wrapper)
       const h2Re = /<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
       let hm;
       while ((hm = h2Re.exec(html)) !== null) {
@@ -463,7 +464,7 @@ function checkTOC(html, report, fix) {
 
       // Also check details[id] > summary > h2 pattern
       if (headings.length === 0) {
-        const detailsRe = /<details[^>]*id="([^"]+)"[^>]*>\s*<summary><h2>([\s\S]*?)<\/h2><\/summary>/g;
+        const detailsRe = /<details[^>]*id="([^"]+)"[^>]*>\s*<summary><h2[^>]*>([\s\S]*?)<\/h2><\/summary>/g;
         while ((hm = detailsRe.exec(html)) !== null) {
           headings.push({ id: hm[1], text: hm[2].replace(/<[^>]+>/g, '').trim() });
         }
