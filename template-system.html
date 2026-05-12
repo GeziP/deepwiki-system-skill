@@ -555,18 +555,8 @@
       });
     }
 
-    // --- TOC auto-generation ---
+    // --- TOC (static entries from converter) ---
     var toc = document.getElementById('toc');
-    var headings = document.querySelectorAll('h2[id], h3[id]');
-    headings.forEach(function(h) {
-      var li = document.createElement('li');
-      var a = document.createElement('a');
-      a.href = '#' + h.id;
-      a.textContent = h.textContent;
-      if (h.tagName === 'H3') a.className = 'toc-h3';
-      li.appendChild(a);
-      toc.appendChild(li);
-    });
 
     // --- Active TOC tracking ---
     var tocLinks = toc.querySelectorAll('a');
@@ -706,6 +696,7 @@
       }, { passive: false });
       inner.addEventListener('touchend', function() { isDragging = false; lastDist = 0; });
     })();
+  })();
   </script>
 </body>
 </html>
