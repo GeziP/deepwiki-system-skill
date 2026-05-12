@@ -191,7 +191,7 @@ function inlineMarkdown(text) {
   return out;
 }
 
-function mdBodyToHtml(body) {
+function mdBodyToHtml(body, parentSectionId) {
   const lines = body.split('\n');
   const out = [];
   let inCode = false;
@@ -299,13 +299,15 @@ function mdBodyToHtml(body) {
     if (/^### /.test(line)) {
       flushList(); flushOl(); flushTable();
       const heading = line.replace(/^### /, '').trim();
-      out.push(`<h3>${inlineMarkdown(heading)}</h3>`);
+      const h3Id = (parentSectionId || '') + '-' + headingToId(heading);
+      out.push(`<h3 id="${h3Id}">${inlineMarkdown(heading)}</h3>`);
       continue;
     }
     if (/^#### /.test(line)) {
       flushList(); flushOl(); flushTable();
       const heading = line.replace(/^#### /, '').trim();
-      out.push(`<h4>${inlineMarkdown(heading)}</h4>`);
+      const h4Id = (parentSectionId || '') + '-' + headingToId(heading);
+      out.push(`<h4 id="${h4Id}">${inlineMarkdown(heading)}</h4>`);
       continue;
     }
 
@@ -317,6 +319,10 @@ function mdBodyToHtml(body) {
 
   flushList(); flushOl(); flushTable();
   return out.join('\n');
+}
+
+function headingToId(text) {
+  return text.trim().replace(/\s+/g, '-').replace(/[^\w一-鿿-]/g, '').toLowerCase();
 }
 
 function sectionId(heading) {
@@ -336,8 +342,7 @@ function sectionId(heading) {
   if (partMatch) {
     return 'sec-part-' + partMatch[1];
   }
-  if (/附录/.test(heading)) return 'sec-appendix';
-  return 'sec-' + heading.replace(/[^\w]/g, '').toLowerCase().slice(0, 20);
+  return 'sec-' + headingToId(heading);
 }
 
 function shouldBeOpen(heading) {
@@ -366,10 +371,10 @@ function buildHtml(parsed, template) {
   const sectionsHtml = sections.map(s => {
     const id = sectionId(s.heading);
     const open = shouldBeOpen(s.heading) ? ' open' : '';
-    const bodyHtml = mdBodyToHtml(s.body);
+    const bodyHtml = mdBodyToHtml(s.body, id);
     return `
-      <details${open}>
-        <summary><h2 id="${id}">${s.heading}</h2></summary>
+      <details${open} id="${id}">
+        <summary><h2 id="${id}-h2">${s.heading}</h2></summary>
         <div class="section-body">
 ${bodyHtml}
         </div>
