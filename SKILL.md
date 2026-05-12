@@ -138,36 +138,30 @@ HTML 特性：
    - 运行 `node system-md-to-html.js doc/<Name>.md` 生成 HTML
    - 运行 `node system-md-to-html.js --index` 更新索引页
 
-6. **Mermaid 校验与修复**（必须步骤）
-   - 生成 HTML 后，**必须**执行以下校验脚本修复 Mermaid 语法问题：
+6. **闭环校验**（必须步骤，不可跳过）
+   - 生成 HTML 后，**必须**运行闭环校验脚本：
    ```bash
-   node -e "
-   const fs = require('fs');
-   const f = 'doc/<Name>_Design.html';
-   let c = fs.readFileSync(f, 'utf8');
-   const re = /<div class=\"mermaid\">([\s\S]*?)<\/div>/g;
-   let m, fixed = c;
-   while ((m = re.exec(c)) !== null) {
-     let b = m[1];
-     // 1. 还原 HTML 实体
-     b = b.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
-     // 2. 修复虚线箭头 -.> →  -.-> (但不改 -.->)
-     b = b.replace(/-\.\>(?!-)/g, '-.->');
-     // 3. 替换标签中的花括号（与 Mermaid 菱形语法冲突）
-     b = b.replace(/\[\"([^\"]*\{[^}]*)\"\]/g, function(_, inner) {
-       return '[\"' + inner.replace(/\{/g, '【').replace(/\}/g, '】') + '\"]';
-     });
-     if (b !== m[1]) fixed = fixed.replace(m[1], b);
-   }
-   fs.writeFileSync(f, fixed, 'utf8');
-   console.log('Mermaid validation done');
-   "
+   # 校验并自动修复
+   node validate-html.js --fix doc/<Name>_Design.html
+
+   # 校验所有系统文档
+   node validate-html.js --fix --all
    ```
-   - 校验规则：
-     - Mermaid 块内不得包含 `&gt;` `&lt;` `&amp;` HTML 实体
-     - 虚线箭头必须写 `-.->` 而非 `-.>`
-     - 节点标签中的 `{}` 需替换为 `【】`（避免与菱形节点语法冲突）
-     - 序列图消息文本中的 `->` 需改为 `.`（如 `codec->getBuffer()` → `codec.getBuffer()`）
+   - 校验覆盖 8 类内容，每类闭环（检查 → 修复 → 重新检查 → 报告）：
+
+     | 校验项 | 说明 | 自动修复 |
+     |--------|------|----------|
+     | Mermaid 块 | HTML 实体、箭头语法、花括号、序列图 | ✓ |
+     | 章节标题 ID | h2/h3 唯一 id、TOC 可定位 | ✓ |
+     | 代码块 | language tag、HTML 转义 | 报告 |
+     | 表格 | thead/tbody 结构 | 报告 |
+     | 内联 Markdown | 链接、粗体已解析 | 报告 |
+     | 可折叠章节 | details/summary 结构 | 报告 |
+     | TOC 完整性 | 非空、链接有效 | ✓ |
+     | HTML 骨架 | charset、viewport、lang | 报告 |
+
+   - **必须所有校验通过后才能交付文档**
+   - 如校验发现无法自动修复的问题，必须手动修复后重新校验
 
 ## HTML 输出特性
 

@@ -77,9 +77,14 @@ function fixMermaidContent(content) {
   // 2. Fix dotted arrows: -.> not followed by - → -.->
   content = content.replace(/-\.\>(?!-)/g, '-.->');
   // 3. Replace {} in quoted node labels (but not diamond nodes which use {"..."})
-  content = content.replace(/\["([^"]*\{[^}]*)"\]/g, function(_, inner) {
-    return '["' + inner.replace(/\{/g, '【').replace(/\}/g, '】') + '"]';
-  });
+  // Use while loop to handle multiple {} pairs in the same label
+  var prev;
+  do {
+    prev = content;
+    content = content.replace(/\["([^"]*\{[^}]*)"\]/g, function(_, inner) {
+      return '["' + inner.replace(/\{/g, '【').replace(/\}/g, '】') + '"]';
+    });
+  } while (content !== prev);
   return content;
 }
 
@@ -162,10 +167,17 @@ function parseMarkdownSections(content) {
 }
 
 function inlineMarkdown(text) {
-  return text
+  // First escape HTML entities in prose (not inside tags)
+  let out = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  // Then apply inline markdown transformations
+  out = out
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  return out;
 }
 
 function mdBodyToHtml(body) {
@@ -345,8 +357,8 @@ function buildHtml(parsed, template) {
     const open = shouldBeOpen(s.heading) ? ' open' : '';
     const bodyHtml = mdBodyToHtml(s.body);
     return `
-      <details${open} id="${id}">
-        <summary><h2>${s.heading}</h2></summary>
+      <details${open}>
+        <summary><h2 id="${id}">${s.heading}</h2></summary>
         <div class="section-body">
 ${bodyHtml}
         </div>
