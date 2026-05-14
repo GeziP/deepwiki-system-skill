@@ -20,6 +20,20 @@ description: 生成系统级架构设计文档的 Skill。当用户询问"系统
 
 **模块级文档请使用**: `deepwiki` skill（触发词："模块文档"、"技术设计文档"、"单模块分析"）
 
+## 先问后做原则 / Ask-First Principle
+
+**遇到任何不确定的情况，必须先询问用户，禁止猜测后执行。**
+
+需要询问的典型场景：
+- 语言偏好（中文/英文模板）
+- 目标文件不明确（单文件多类、入口文件不确定）
+- 模块边界模糊（哪些相关文件需要覆盖）
+- 章节取舍（哪些章节适用、哪些可跳过）
+- 输出路径或命名约定
+- 用户意图有多种合理解读
+
+使用 AskUserQuestion 时，提供 2-4 个具体选项 + "Other" 自定义输入。
+
 ## Compatibility
 
 - 需要 Read, Grep, Glob, Bash 工具
@@ -42,13 +56,13 @@ artifacts/module-summaries.json       ← 模块摘要集合
 
 ```bash
 # 转换单个文件
-node system-md-to-html.js doc/<Name>_Design.md
+node ~/.claude/skills/shared-docs/md-to-html.js --type system doc/<Name>_Design.md
 
 # 转换所有系统文档
-node system-md-to-html.js --all
+node ~/.claude/skills/shared-docs/md-to-html.js --type system --all
 
 # 生成索引导航页
-node system-md-to-html.js --index "项目名" "项目描述"
+node ~/.claude/skills/shared-docs/md-to-html.js --type system --index "项目名" "项目描述"
 ```
 
 HTML 特性：
@@ -120,6 +134,8 @@ HTML 特性：
    - 读取 `references/code-analysis.md`
    - 分析代码目录结构
    - 识别核心组件与入口点
+   - **记录源码位置** — 对每个关键函数/类，记录 `file:line` 范围
+   - **提取领域术语** — 从类名、枚举值、配置键、业务概念中收集术语
 
 2. **架构图生成**
    - 读取 `references/architecture-mermaid.md`
@@ -133,6 +149,11 @@ HTML 特性：
 4. **整合输出**
    - 生成系统架构设计文档（Markdown）
    - 包含：分层架构、组件职责、数据流、线程模型、配置系统等
+   - **层级编号**：H2 用 `## 1. 概述`，H3 用 `### 1.1 架构层次`
+   - **Scope 声明**：文档开头添加 scope-block，说明覆盖范围和边界
+   - **源码引用**：每个代码引用必须带 `file:line`，每章节结尾添加 Sources 块
+   - **术语表**：文档末尾添加 Glossary 表格
+   - **关联源文件**：文档顶部添加 Relevant source files 块
 
 5. **HTML 转换**
    - 运行 `node system-md-to-html.js doc/<Name>.md` 生成 HTML
@@ -141,26 +162,41 @@ HTML 特性：
 6. **闭环校验**（必须步骤，不可跳过）
    - 生成 HTML 后，**必须**运行闭环校验脚本：
    ```bash
-   # 校验并自动修复
-   node validate-html.js --fix doc/<Name>_Design.html
+   # 新文档校验（含 source refs / glossary / scope 强制检查）
+   node ~/.claude/skills/shared-docs/validate-doc.js --new-doc --fix --type system doc/<Name>_Design.html
+
+   # 校验并自动修复已有文档
+   node ~/.claude/skills/shared-docs/validate-doc.js --fix --type system doc/<Name>_Design.html
 
    # 校验所有系统文档
-   node validate-html.js --fix --all
+   node ~/.claude/skills/shared-docs/validate-doc.js --fix --type system --all
    ```
-   - 校验覆盖 8 类内容，每类闭环（检查 → 修复 → 重新检查 → 报告）：
+   - 校验覆盖 11 类内容，每类闭环（检查 → 修复 → 重新检查 → 报告）：
 
      | 校验项 | 说明 | 自动修复 |
      |--------|------|----------|
      | Mermaid 块 | HTML 实体、箭头语法、花括号、序列图 | ✓ |
      | 章节标题 ID | h2/h3 唯一 id、TOC 可定位 | ✓ |
-     | 代码块 | language tag、HTML 转义 | 报告 |
+     | 代码块 | language tag、HTML 转义、bare code wrap | ✓ |
      | 表格 | thead/tbody 结构 | 报告 |
      | 内联 Markdown | 链接、粗体已解析 | 报告 |
      | 可折叠章节 | details/summary 结构 | 报告 |
      | TOC 完整性 | 非空、链接有效 | ✓ |
      | HTML 骨架 | charset、viewport、lang | 报告 |
+     | 源码引用 | source-ref、sources-block、relevant-sources | 报告 (--new-doc 时必填) |
+     | 术语表 | glossary 章节存在 | 报告 (--new-doc 时必填) |
+     | Scope 声明 | scope-block 存在 | 报告 (--new-doc 时必填) |
 
-   - **必须所有校验通过后才能交付文档**
+   **交互功能验证（必须手动确认）**：
+
+   | 功能 | 验证方式 | 常见问题 |
+   |------|---------|---------|
+   | Mermaid 图表点击放大 | 点击图表 → 全屏放大 → 滚轮缩放 → Esc 关闭 | 缺少 `.mermaid-overlay` JS 逻辑 |
+   | 代码复制按钮 | hover 代码块 → 出现 Copy 按钮 → 点击复制 | 缺少 `.copy-btn` JS 逻辑 |
+   | 暗色模式 | 点击主题切换 → Mermaid 重渲染 → 图表可读 | Mermaid 未跟随主题切换 |
+   | 侧边栏 TOC | 点击 H2/H3 → 滚动到对应章节 → ScrollSpy 高亮 | TOC 为空或链接失效 |
+
+   - **新文档必须所有校验通过（含 `--new-doc`）才能交付**
    - 如校验发现无法自动修复的问题，必须手动修复后重新校验
 
 ## HTML 输出特性
