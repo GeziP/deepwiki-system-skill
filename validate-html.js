@@ -281,10 +281,11 @@ function checkCodeBlocks(html, report) {
     }
   }
 
-  // Also check <pre><code> outside figure
-  const bareCodeRe = /<(?!figure)pre><code>([\s\S]*?)<\/code><\/pre>/g;
+  // Count <pre><code> NOT inside <figure> wrappers
+  const withoutFigures = html.replace(/<figure[\s\S]*?<\/figure>/g, '');
+  const bareCodeRe = /<pre><code>[\s\S]*?<\/code><\/pre>/g;
   let bareCount = 0;
-  while ((m = bareCodeRe.exec(html)) !== null) bareCount++;
+  while (bareCodeRe.exec(withoutFigures) !== null) bareCount++;
 
   if (count === 0) {
     report.pass(cat, 'No code blocks found');
@@ -406,8 +407,10 @@ function checkCollapsibleSections(html, report) {
   }
 
   // Check for </details> without matching <details>
-  const openDetails = (html.match(/<details/g) || []).length;
-  const closeDetails = (html.match(/<\/details>/g) || []).length;
+  // Strip <style>/<script> blocks to avoid counting CSS comments containing "<details"
+  const htmlOnly = html.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '');
+  const openDetails = (htmlOnly.match(/<details/g) || []).length;
+  const closeDetails = (htmlOnly.match(/<\/details>/g) || []).length;
   if (openDetails !== closeDetails) {
     orphaned = Math.abs(openDetails - closeDetails);
   }
@@ -433,8 +436,8 @@ function checkTOC(html, report, fix) {
   const cat = 'TOC 完整性';
   let fixedHtml = html;
 
-  // Find the TOC list (accept both id="toc" and id="tocList")
-  const tocMatch = html.match(/<ul class="toc-list"[^>]*>([\s\S]*?)<\/ul>/);
+  // Use a non-greedy regex that doesn't cross </ul> boundaries
+  const tocMatch = html.match(/<ul class="toc-list"[^>]*>((?:[^<]|<(?!\/ul>))*?)<\/ul>/);
   if (!tocMatch) {
     const hasSidebar = /class="sidebar"/.test(html) || /id="toc"/.test(html) || /toc-list/.test(html);
     if (!hasSidebar) {
@@ -447,36 +450,7 @@ function checkTOC(html, report, fix) {
 
   const tocContent = tocMatch[1].trim();
   if (tocContent.length === 0 || !/<li/.test(tocContent)) {
-    // TOC is empty — try to generate from headings
-    if (fix) {
-      const headings = [];
-      const h2Re = /<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
-      let hm;
-      while ((hm = h2Re.exec(html)) !== null) {
-        const id = hm[1];
-        const text = hm[2].replace(/<[^>]+>/g, '').trim();
-        headings.push({ id, text });
-      }
-
-      // Also check details[id] > summary > h2 pattern
-      if (headings.length === 0) {
-        const detailsRe = /<details[^>]*id="([^"]+)"[^>]*>\s*<summary><h2>([\s\S]*?)<\/h2><\/summary>/g;
-        while ((hm = detailsRe.exec(html)) !== null) {
-          headings.push({ id: hm[1], text: hm[2].replace(/<[^>]+>/g, '').trim() });
-        }
-      }
-
-      if (headings.length > 0) {
-        const tocItems = headings.map(h => `        <li><a href="#${h.id}">${h.text}</a></li>`).join('\n');
-        const newToc = `\n${tocItems}\n      `;
-        fixedHtml = fixedHtml.replace(tocMatch[1], newToc);
-        report.fixed(cat, `Generated TOC with ${headings.length} entries`);
-      } else {
-        report.fail(cat, 'TOC is empty and no headings with IDs found to generate it');
-      }
-    } else {
-      report.fail(cat, 'TOC is empty (no <li> entries)');
-    }
+    report.fail(cat, 'TOC is empty (no <li> entries) — converter should generate static TOC');
   } else {
     // TOC has content — verify links point to existing IDs
     const tocLinks = tocContent.match(/href="#([^"]+)"/g) || [];
@@ -532,6 +506,38 @@ function checkHtmlSkeleton(html, report) {
   }
 }
 
+/**
+ * 9. JavaScript 语法校验
+ */
+function checkJavaScript(html, report) {
+  const cat = 'JavaScript 语法';
+  const scriptRe = /<script>([\s\S]*?)<\/script>/g;
+  let m;
+  let blockCount = 0;
+  let syntaxErrors = [];
+
+  while ((m = scriptRe.exec(html)) !== null) {
+    blockCount++;
+    const js = m[1].trim();
+    if (js.length === 0) continue;
+    try {
+      new Function(js);
+    } catch (e) {
+      syntaxErrors.push({ block: blockCount, error: e.message, snippet: js.slice(-80).replace(/\n/g, '\\n') });
+    }
+  }
+
+  if (blockCount === 0) {
+    report.pass(cat, 'No inline script blocks found');
+  } else if (syntaxErrors.length === 0) {
+    report.pass(cat, `${blockCount} script block(s) syntax valid`);
+  } else {
+    for (const err of syntaxErrors) {
+      report.fail(cat, `Script #${err.block}: ${err.error} (…${err.snippet})`);
+    }
+  }
+}
+
 // ============================================================
 // Main
 // ============================================================
@@ -541,7 +547,7 @@ function validateFile(filePath, fix) {
   const report = new Report(path.basename(filePath));
   const originalHtml = html;
 
-  // Run all 8 checks
+  // Run all 9 checks
   html = checkMermaid(html, report, fix);
   html = checkHeadingIds(html, report, fix);
   checkCodeBlocks(html, report);
@@ -550,6 +556,7 @@ function validateFile(filePath, fix) {
   checkCollapsibleSections(html, report);
   html = checkTOC(html, report, fix);
   checkHtmlSkeleton(html, report);
+  checkJavaScript(html, report);
 
   const result = report.print();
 
